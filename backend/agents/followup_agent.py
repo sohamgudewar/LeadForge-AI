@@ -7,19 +7,28 @@ llm = ChatGoogleGenerativeAI(
 )
 
 
-def research_company(company_name: str):
+def generate_followup(
+    company: str,
+    previous_email: str
+):
 
     prompt = f"""
-    Analyze the company: {company_name}
+You are an SDR.
 
-    Return:
+Company:
+{company}
 
-    1. Industry
-    2. Possible business challenges
-    3. Potential sales opportunities
+Original Email:
+{previous_email}
 
-    Keep response concise.
-    """
+Generate:
+
+1. Follow Up #1
+2. Follow Up #2
+3. Breakup Email
+
+Keep them concise and professional.
+"""
 
     response = llm.invoke(prompt)
 

@@ -7,19 +7,22 @@ llm = ChatGoogleGenerativeAI(
 )
 
 
-def research_company(company_name: str):
+def enrich_lead(company: str):
 
     prompt = f"""
-    Analyze the company: {company_name}
+Company:
+{company}
 
-    Return:
+Provide:
 
-    1. Industry
-    2. Possible business challenges
-    3. Potential sales opportunities
+1. Estimated company size
+2. Possible target buyers
+3. Common departments using sales tools
+4. Potential decision makers
+5. Estimated outreach priority
 
-    Keep response concise.
-    """
+Keep concise.
+"""
 
     response = llm.invoke(prompt)
 

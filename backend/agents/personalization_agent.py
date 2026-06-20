@@ -6,25 +6,34 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=GOOGLE_API_KEY
 )
 
-def generate_personalization(research_summary: str):
+
+def generate_personalization(
+    research: str,
+    knowledge: str,
+    enrichment: str
+):
 
     prompt = f"""
-    You are a sales development representative.
+You are an expert SDR.
 
-    Based on the company research below:
+Research:
+{research}
 
-    {research_summary}
+Company Knowledge:
+{knowledge}
 
-    Create a short personalized outreach hook.
+Lead Enrichment:
+{enrichment}
 
-    Rules:
-    - Maximum 2 sentences
-    - Professional
-    - Mention a likely challenge
-    - Mention a possible opportunity
+Create ONE highly personalized outreach angle.
 
-    Return only the hook.
-    """
+Requirements:
+- Mention a likely business challenge
+- Mention a likely decision maker
+- Mention a likely growth opportunity
+- Keep under 60 words
+- Sound natural
+"""
 
     response = llm.invoke(prompt)
 

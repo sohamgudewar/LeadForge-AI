@@ -5,3 +5,25 @@ __pycache__/
 .vscode/
 node_modules/
 dist/
+# Python
+*.pyo
+
+# Virtual Environment
+.venv/
+
+# Environment Variables
+.env
+
+# VS Code
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Logs
+*.log

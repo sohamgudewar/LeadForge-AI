@@ -6,6 +6,7 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=GOOGLE_API_KEY
 )
 
+
 def generate_email(company_name: str, personalization: str):
 
     prompt = f"""
