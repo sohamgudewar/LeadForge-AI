@@ -27,3 +27,11 @@ build/
 
 # Logs
 *.log
+venv/
+__pycache__/
+.env
+
+chroma_db/
+uploads/
+
+*.pyc
