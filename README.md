@@ -259,5 +259,11 @@ frontend/
 
 Soham Gudewar
 
+
 GitHub:
 https://github.com/sohamgudewar
+
+
+Copyright 2026 Soham Gudewar
+
+Licensed under the Apache License, Version 2.0.
