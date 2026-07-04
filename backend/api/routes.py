@@ -1,8 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from models.lead import LeadRequest
 
-from graph.workflow import graph
+from graph.workflow import run_pipeline
 
 from database.crud import (
     save_lead,
@@ -16,13 +16,15 @@ router = APIRouter()
 @router.post("/run-agent")
 def run_agent(request: LeadRequest):
 
-    result = graph.invoke(
-        {
-            "company": request.company
-        }
-    )
+    result = run_pipeline(request.company)
 
-    save_lead(result)
+    try:
+        save_lead(result)
+    except Exception as e:
+        return {
+            **result,
+            "warning": f"Lead processed but could not be saved: {str(e)}"
+        }
 
     return result
 
@@ -30,7 +32,13 @@ def run_agent(request: LeadRequest):
 @router.get("/leads")
 def fetch_leads():
 
-    leads = get_leads()
+    try:
+        leads = get_leads()
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database unavailable: {str(e)}"
+        )
 
     return [
         {
@@ -44,7 +52,13 @@ def fetch_leads():
 @router.get("/lead/{lead_id}")
 def fetch_lead(lead_id: int):
 
-    lead = get_lead_by_id(lead_id)
+    try:
+        lead = get_lead_by_id(lead_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database unavailable: {str(e)}"
+        )
 
     if not lead:
         return {

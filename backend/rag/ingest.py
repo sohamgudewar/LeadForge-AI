@@ -1,11 +1,10 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 
 import os
 
-CHROMA_PATH = "chroma_db"
+from rag.retriever import CHROMA_PATH, ChromaEmbeddings
 
 
 def ingest_pdf(file_path: str):
@@ -33,9 +32,7 @@ def ingest_pdf(file_path: str):
     if len(chunks) == 0:
         return f"No content found in {file_path}"
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
+    embeddings = ChromaEmbeddings()
 
     vectorstore = Chroma.from_documents(
         documents=chunks,

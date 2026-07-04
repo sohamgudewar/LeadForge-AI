@@ -1,21 +1,39 @@
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 CHROMA_PATH = "chroma_db"
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+_vectorstore = None
 
-vectorstore = Chroma(
-    persist_directory=CHROMA_PATH,
-    embedding_function=embeddings
-)
+
+class ChromaEmbeddings:
+    def __init__(self):
+        self._ef = DefaultEmbeddingFunction()
+
+    def embed_query(self, text: str) -> list[float]:
+        result = self._ef([text])
+        return [float(x) for x in result[0]]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        result = self._ef(texts)
+        return [[float(x) for x in emb] for emb in result]
+
+
+def _get_vectorstore():
+    global _vectorstore
+    if _vectorstore is None:
+        _vectorstore = Chroma(
+            persist_directory=CHROMA_PATH,
+            embedding_function=ChromaEmbeddings()
+        )
+    return _vectorstore
 
 
 def retrieve_company_context(company: str):
 
-    docs = vectorstore.similarity_search(
+    vs = _get_vectorstore()
+
+    docs = vs.similarity_search(
         query=company,
         k=3,
         filter={

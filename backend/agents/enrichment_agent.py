@@ -1,10 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from config import GOOGLE_API_KEY
+from config import get_llm
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=GOOGLE_API_KEY
-)
+llm = get_llm()
 
 
 def enrich_lead(company: str):
