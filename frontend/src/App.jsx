@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
 function App() {
   const [company, setCompany] = useState("");
+  const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -10,9 +13,7 @@ function App() {
 
   const loadLeads = async () => {
     try {
-      const response = await axios.get(
-        "http://127.0.0.1:8000/leads"
-      );
+      const response = await axios.get(`${API_URL}/leads`);
 
       setLeads(response.data);
     } catch (error) {
@@ -22,9 +23,7 @@ function App() {
 
   const loadLead = async (leadId) => {
     try {
-      const response = await axios.get(
-        `http://127.0.0.1:8000/lead/${leadId}`
-      );
+      const response = await axios.get(`${API_URL}/lead/${leadId}`);
 
       setResult(response.data);
     } catch (error) {
@@ -38,12 +37,21 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/run-agent",
-        {
+      let response;
+
+      if (file) {
+        const formData = new FormData();
+        formData.append("company", company);
+        formData.append("file", file);
+
+        response = await axios.post(`${API_URL}/run-agent-with-pdf`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        response = await axios.post(`${API_URL}/run-agent`, {
           company,
-        }
-      );
+        });
+      }
 
       setResult(response.data);
 
@@ -107,6 +115,18 @@ function App() {
               className="w-full p-3 rounded text-black"
             />
 
+            <div className="mt-3">
+              <label className="block text-sm text-gray-400 mb-1">
+                Optional: Upload company PDF for better personalization
+              </label>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setFile(e.target.files[0] || null)}
+                className="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+            </div>
+
             <button
               onClick={runAgent}
               className="mt-4 px-6 py-3 bg-blue-600 rounded"
@@ -115,6 +135,12 @@ function App() {
                 ? "Generating..."
                 : "Generate Outreach"}
             </button>
+
+            {loading && (
+              <p className="mt-4 text-yellow-400 text-sm">
+                This may take a minute as 7+ AI agents analyze the company...
+              </p>
+            )}
 
           </div>
 
@@ -176,6 +202,13 @@ function App() {
 
         </div>
 
+      </div>
+
+      <div className="fixed bottom-4 right-4 text-sm text-gray-500">
+        Contact developer:{" "}
+        <a href="mailto:sohamgudewar10@gmail.com" className="text-blue-400 hover:underline">
+          sohamgudewar10@gmail.com
+        </a>
       </div>
 
     </div>
