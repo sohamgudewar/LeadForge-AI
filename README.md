@@ -1,4 +1,3 @@
- opencode -s ses_0d2e5ffa7ffe5Vu64uddH1xrIMs
 # LeadForge AI
 
 LeadForge AI is a multi-agent AI SDR (Sales Development Representative) platform that automates lead research, qualification, personalization, and outreach generation.
