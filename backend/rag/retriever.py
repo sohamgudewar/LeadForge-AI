@@ -1,8 +1,21 @@
 from langchain_chroma import Chroma
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2
+import os
 from pathlib import Path
+import tempfile
 
 CHROMA_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
+MODEL_CACHE_PATH = Path(
+    os.getenv(
+        "CHROMA_MODEL_CACHE_PATH",
+        str(Path(tempfile.gettempdir()) / "chroma" / "onnx_models" / ONNXMiniLM_L6_V2.MODEL_NAME),
+    )
+)
+
+# Render services can have HOME=/nonexistent. Chroma otherwise derives its ONNX
+# download directory from HOME and fails before the first similarity search.
+ONNXMiniLM_L6_V2.DOWNLOAD_PATH = MODEL_CACHE_PATH
 
 _vectorstore = None
 
