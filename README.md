@@ -188,6 +188,7 @@ The repository-level `railway.toml` selects `backend/Dockerfile`, checks
 - `DATABASE_URL`
 - `GOOGLE_API_KEY`
 - `TAVILY_API_KEY` (optional)
+- `CORS_ORIGINS=https://leadforgeai0i0.vercel.app`
 - `RAILWAY_DOCKERFILE_PATH=backend/Dockerfile` if the dashboard does not pick up
   Config as Code
 
