@@ -1,9 +1,14 @@
-from config import get_llm
+from agents.structured import invoke_structured
+from models.outreach import OutreachEmail, Personalization
 
-llm = get_llm()
 
+def generate_email(
+    company_name: str,
+    personalization: Personalization,
+    revision_instructions: list[str] | None = None
+) -> OutreachEmail:
 
-def generate_email(company_name: str, personalization: str):
+    feedback = revision_instructions or []
 
     prompt = f"""
     Write a cold outreach email.
@@ -12,7 +17,10 @@ def generate_email(company_name: str, personalization: str):
     {company_name}
 
     Personalization:
-    {personalization}
+    {personalization.model_dump_json(indent=2)}
+
+    Reviewer revision instructions:
+    {feedback}
 
     Rules:
     - Subject line included
@@ -20,15 +28,7 @@ def generate_email(company_name: str, personalization: str):
     - Professional
     - Clear CTA
 
-    Format:
-
-    Subject:
-    ...
-
-    Email:
-    ...
+    Incorporate every reviewer instruction when provided.
     """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+    return invoke_structured(OutreachEmail, prompt)

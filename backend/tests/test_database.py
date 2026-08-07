@@ -31,6 +31,16 @@ class TestSaveLead:
         leads = get_leads()
         assert len(leads) == 3
 
+    def test_serializes_structured_fields_as_json(self, sample_lead_data):
+        sample_lead_data["lead_score"] = {
+            "score": 8,
+            "reasons": ["Strong fit"]
+        }
+        save_lead(sample_lead_data)
+
+        lead = get_leads()[0]
+        assert '"score": 8' in lead.lead_score
+
     def test_id_is_auto_incremented(self, sample_lead_data):
         save_lead(sample_lead_data)
         save_lead({**sample_lead_data, "company": "Another"})

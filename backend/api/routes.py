@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from models.lead import LeadRequest
@@ -11,6 +13,15 @@ from database.crud import (
 )
 
 router = APIRouter()
+
+
+def _decode_structured(value):
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
 
 
 @router.post("/run-agent")
@@ -61,18 +72,16 @@ def fetch_lead(lead_id: int):
         )
 
     if not lead:
-        return {
-            "error": "Lead not found"
-        }
+        raise HTTPException(status_code=404, detail="Lead not found")
 
     return {
         "id": lead.id,
         "company": lead.company,
         "knowledge": lead.knowledge,
-        "research": lead.research,
-        "enrichment": lead.enrichment,
-        "lead_score": lead.lead_score,
-        "personalization": lead.personalization,
-        "email": lead.email,
-        "review": lead.review
+        "research": _decode_structured(lead.research),
+        "enrichment": _decode_structured(lead.enrichment),
+        "lead_score": _decode_structured(lead.lead_score),
+        "personalization": _decode_structured(lead.personalization),
+        "email": _decode_structured(lead.email),
+        "review": _decode_structured(lead.review)
     }

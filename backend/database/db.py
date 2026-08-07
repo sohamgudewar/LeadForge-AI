@@ -23,5 +23,6 @@ engine = create_engine(DATABASE_URL, **_kwargs)
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
+    expire_on_commit=False,
     bind=engine
 )

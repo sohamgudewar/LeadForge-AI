@@ -1,0 +1,52 @@
+[
+  {
+    "company": "Stripe",
+    "industry_keywords": ["fintech", "financial", "payment"],
+    "required_email_terms": ["Stripe"]
+  },
+  {
+    "company": "HubSpot",
+    "industry_keywords": ["crm", "marketing", "sales software"],
+    "required_email_terms": ["HubSpot"]
+  },
+  {
+    "company": "Slack",
+    "industry_keywords": ["collaboration", "communication", "software"],
+    "required_email_terms": ["Slack"]
+  },
+  {
+    "company": "Shopify",
+    "industry_keywords": ["commerce", "ecommerce", "retail software"],
+    "required_email_terms": ["Shopify"]
+  },
+  {
+    "company": "Datadog",
+    "industry_keywords": ["observability", "monitoring", "cloud software"],
+    "required_email_terms": ["Datadog"]
+  },
+  {
+    "company": "Canva",
+    "industry_keywords": ["design", "creative software", "software"],
+    "required_email_terms": ["Canva"]
+  },
+  {
+    "company": "Notion",
+    "industry_keywords": ["productivity", "collaboration", "software"],
+    "required_email_terms": ["Notion"]
+  },
+  {
+    "company": "Atlassian",
+    "industry_keywords": ["software", "collaboration", "developer tools"],
+    "required_email_terms": ["Atlassian"]
+  },
+  {
+    "company": "Cloudflare",
+    "industry_keywords": ["security", "network", "cloud"],
+    "required_email_terms": ["Cloudflare"]
+  },
+  {
+    "company": "Zoom",
+    "industry_keywords": ["communication", "video", "software"],
+    "required_email_terms": ["Zoom"]
+  }
+]

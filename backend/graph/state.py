@@ -1,5 +1,14 @@
 from typing import TypedDict
 
+from models.outreach import (
+    CompanyResearch,
+    LeadEnrichment,
+    LeadScore,
+    OutreachEmail,
+    OutreachReview,
+    Personalization,
+)
+
 
 class SDRState(TypedDict):
 
@@ -7,14 +16,16 @@ class SDRState(TypedDict):
 
     knowledge: str
 
-    research: str
+    research: CompanyResearch | None
 
-    enrichment: str
+    enrichment: LeadEnrichment | None
 
-    lead_score: str
+    lead_score: LeadScore | None
 
-    personalization: str
+    personalization: Personalization | None
 
-    email: str
+    email: OutreachEmail | None
 
-    review: str
+    review: OutreachReview | None
+
+    revision_count: int

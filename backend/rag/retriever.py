@@ -1,7 +1,8 @@
 from langchain_chroma import Chroma
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from pathlib import Path
 
-CHROMA_PATH = "chroma_db"
+CHROMA_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
 
 _vectorstore = None
 

@@ -1,0 +1,16 @@
+.git
+.github
+.env
+**/.env
+**/.env.example
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.db
+backend/uploads
+backend/chroma_db
+backend/evaluation/results
+backend/tests
+frontend/node_modules
+frontend/dist

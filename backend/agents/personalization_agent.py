@@ -1,25 +1,24 @@
-from config import get_llm
-
-llm = get_llm()
+from agents.structured import invoke_structured
+from models.outreach import CompanyResearch, LeadEnrichment, Personalization
 
 
 def generate_personalization(
-    research: str,
+    research: CompanyResearch,
     knowledge: str,
-    enrichment: str
-):
+    enrichment: LeadEnrichment
+) -> Personalization:
 
     prompt = f"""
 You are an expert SDR.
 
 Research:
-{research}
+{research.model_dump_json(indent=2)}
 
 Company Knowledge:
 {knowledge}
 
 Lead Enrichment:
-{enrichment}
+{enrichment.model_dump_json(indent=2)}
 
 Create ONE highly personalized outreach angle.
 
@@ -31,6 +30,4 @@ Requirements:
 - Sound natural
 """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+    return invoke_structured(Personalization, prompt)

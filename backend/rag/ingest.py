@@ -7,7 +7,7 @@ import os
 from rag.retriever import CHROMA_PATH, ChromaEmbeddings
 
 
-def ingest_pdf(file_path: str):
+def ingest_pdf(file_path: str, company_name: str | None = None):
 
     loader = PyPDFLoader(file_path)
 
@@ -22,9 +22,10 @@ def ingest_pdf(file_path: str):
         documents
     )
 
-    company_name = os.path.basename(
-        file_path
-    ).replace(".pdf", "").lower()
+    company_name = (
+        company_name
+        or os.path.splitext(os.path.basename(file_path))[0]
+    ).strip().lower()
 
     for chunk in chunks:
         chunk.metadata["company"] = company_name

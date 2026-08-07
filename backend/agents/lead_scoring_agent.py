@@ -1,8 +1,7 @@
-from config import get_llm
+from agents.structured import invoke_structured
+from models.outreach import CompanyResearch, LeadScore
 
-llm = get_llm()
-
-def score_lead(research: str):
+def score_lead(research: CompanyResearch) -> LeadScore:
 
     prompt = f"""
     Based on this company research, assign a lead score from 1-10.
@@ -14,16 +13,7 @@ def score_lead(research: str):
     - Sales opportunity
 
     Research:
-    {research}
-
-    Return ONLY:
-
-    Score: X/10
-
-    Reason:
-    ...
+    {research.model_dump_json(indent=2)}
     """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+    return invoke_structured(LeadScore, prompt)

@@ -37,8 +37,8 @@ class TestGetLeadById:
 
     def test_returns_404_when_not_found(self, client):
         response = client.get("/lead/999")
-        assert response.status_code == 200
-        assert response.json() == {"error": "Lead not found"}
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Lead not found"}
 
 
 class TestUploadPdf:
@@ -50,6 +50,14 @@ class TestUploadPdf:
         )
         assert response.status_code == 400
         assert "PDF" in response.json()["detail"]
+
+    def test_rejects_fake_pdf_content(self, client):
+        response = client.post(
+            "/upload-pdf",
+            files={"file": ("test.pdf", b"not a pdf", "application/pdf")}
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "File content is not a valid PDF"
 
     def test_rejects_empty_filename(self, client):
         response = client.post(
@@ -76,6 +84,19 @@ class TestRunAgent:
         )
         assert response.status_code == 422
 
+    @pytest.mark.parametrize("company", ["", "   ", "a"])
+    def test_rejects_invalid_company(self, client, company):
+        response = client.post("/run-agent", json={"company": company})
+        assert response.status_code == 422
+
+    def test_normalizes_company_whitespace(self, client):
+        response = client.post(
+            "/run-agent",
+            json={"company": "  Acme    Corporation  "}
+        )
+        assert response.status_code == 200
+        assert response.json()["company"] == "Acme Corporation"
+
     def test_accepts_valid_company(self, client):
         response = client.post(
             "/run-agent",
@@ -85,3 +106,7 @@ class TestRunAgent:
         data = response.json()
         assert "company" in data
         assert data["company"] == "test"
+        assert data["lead_score"]["score"] == 8
+        assert data["email"]["subject"] == "Scale qualified outreach"
+        assert data["review"]["approved"] is True
+        assert data["revision_count"] == 0

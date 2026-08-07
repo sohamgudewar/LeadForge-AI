@@ -1,9 +1,8 @@
-from config import get_llm
+from agents.structured import invoke_structured
+from models.outreach import LeadEnrichment
 
-llm = get_llm()
 
-
-def enrich_lead(company: str):
+def enrich_lead(company: str) -> LeadEnrichment:
 
     prompt = f"""
 Company:
@@ -20,6 +19,4 @@ Provide:
 Keep concise.
 """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+    return invoke_structured(LeadEnrichment, prompt)

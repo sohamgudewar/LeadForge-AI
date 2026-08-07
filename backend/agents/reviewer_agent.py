@@ -1,13 +1,17 @@
-from config import get_llm
-
-llm = get_llm()
+from agents.structured import invoke_structured
+from models.outreach import (
+    CompanyResearch,
+    OutreachEmail,
+    OutreachReview,
+    Personalization,
+)
 
 
 def review_outreach(
-    research: str,
-    personalization: str,
-    email: str
-):
+    research: CompanyResearch,
+    personalization: Personalization,
+    email: OutreachEmail
+) -> OutreachReview:
 
     prompt = f"""
 You are a senior SDR manager.
@@ -15,13 +19,13 @@ You are a senior SDR manager.
 Review the following outreach package.
 
 Research:
-{research}
+{research.model_dump_json(indent=2)}
 
 Personalization:
-{personalization}
+{personalization.model_dump_json(indent=2)}
 
 Email:
-{email}
+{email.model_dump_json(indent=2)}
 
 Evaluate:
 
@@ -30,11 +34,11 @@ Evaluate:
 3. Email Quality (1-10)
 4. Overall SDR Readiness Score
 
-Give strengths and weaknesses.
+Approve only if the email is relevant, concise, professional, has a clear CTA,
+and does not make unsupported claims. If rejected, provide concrete revision
+instructions.
 
 Keep response concise.
 """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+    return invoke_structured(OutreachReview, prompt)
