@@ -3,15 +3,38 @@ import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const EXAMPLE_COMPANIES = ["Stripe", "HubSpot", "Slack"];
+const WORKFLOW_STAGES = [
+  { label: "Research", detail: "Gathering company context" },
+  { label: "Qualification", detail: "Scoring lead fit" },
+  { label: "Personalization", detail: "Finding the outreach angle" },
+  { label: "Review", detail: "Checking and revising the email" },
+];
+const RESULT_VIEWS = ["Overview", "Email", "Review"];
+const PANEL_ACCENTS = {
+  cyan: "border-t-cyan-500/70 from-cyan-500/10",
+  blue: "border-t-blue-500/70 from-blue-500/10",
+  violet: "border-t-violet-500/70 from-violet-500/10",
+  indigo: "border-t-indigo-500/70 from-indigo-500/10",
+  emerald: "border-t-emerald-500/70 from-emerald-500/10",
+  amber: "border-t-amber-500/70 from-amber-500/10",
+};
+const PANEL_EYEBROWS = {
+  cyan: "text-cyan-400",
+  blue: "text-blue-400",
+  violet: "text-violet-400",
+  indigo: "text-indigo-400",
+  emerald: "text-emerald-400",
+  amber: "text-amber-400",
+};
 
 const isObject = (value) => value && typeof value === "object";
 const asList = (value) => (Array.isArray(value) ? value : []);
 const legacyText = (value) => (typeof value === "string" ? value : "");
 
-function Panel({ title, eyebrow, children, className = "" }) {
+function Panel({ title, eyebrow, children, className = "", accent = "cyan" }) {
   return (
-    <section className={`rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl shadow-black/10 sm:p-6 ${className}`}>
-      {eyebrow && <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">{eyebrow}</p>}
+    <section className={`rounded-2xl border border-slate-800 border-t-2 bg-gradient-to-b to-slate-900/80 p-5 shadow-xl shadow-black/10 sm:p-6 ${PANEL_ACCENTS[accent]} ${className}`}>
+      {eyebrow && <p className={`mb-1 text-xs font-semibold uppercase tracking-[0.18em] ${PANEL_EYEBROWS[accent]}`}>{eyebrow}</p>}
       <h2 className="mb-4 text-xl font-semibold text-white">{title}</h2>
       {children}
     </section>
@@ -56,6 +79,9 @@ function App() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [leads, setLeads] = useState([]);
+  const [activeView, setActiveView] = useState("Overview");
+  const [loadingStage, setLoadingStage] = useState(0);
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
 
   const loadLeads = async () => {
     try {
@@ -71,10 +97,12 @@ function App() {
 
   const loadLead = async (leadId) => {
     setError("");
+    setSelectedLeadId(leadId);
     try {
       const response = await axios.get(`${API_URL}/lead/${leadId}`);
       setResult(response.data);
       setCompany(response.data.company || "");
+      setActiveView("Overview");
     } catch (requestError) {
       console.error(requestError);
       setError(requestError.response?.data?.detail || "Could not load this lead.");
@@ -89,6 +117,9 @@ function App() {
     }
 
     setLoading(true);
+    setSelectedLeadId(null);
+    setLoadingStage(0);
+    setActiveView("Overview");
     setError("");
     setCopied(false);
 
@@ -142,6 +173,14 @@ function App() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!loading) return undefined;
+    const timer = window.setInterval(() => {
+      setLoadingStage((current) => Math.min(current + 1, WORKFLOW_STAGES.length - 1));
+    }, 9000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
   const research = isObject(result?.research) ? result.research : null;
   const enrichment = isObject(result?.enrichment) ? result.enrichment : null;
   const leadScore = isObject(result?.lead_score) ? result.lead_score : null;
@@ -179,7 +218,7 @@ function App() {
                 type="button"
                 key={lead.id}
                 onClick={() => loadLead(lead.id)}
-                className="min-w-44 rounded-xl border border-slate-800 bg-slate-900 px-3 py-3 text-left text-sm text-slate-300 transition hover:border-cyan-500/50 hover:text-white lg:w-full"
+                className={`min-w-44 rounded-xl border px-3 py-3 text-left text-sm transition lg:w-full ${selectedLeadId === lead.id ? "border-cyan-500/60 bg-gradient-to-r from-cyan-950/70 to-blue-950/40 text-white shadow-lg shadow-cyan-950/20" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-500/50 hover:text-white"}`}
               >
                 <span className="block truncate font-medium">{lead.company}</span>
                 <span className="mt-1 block text-xs text-slate-600">Lead #{lead.id}</span>
@@ -243,13 +282,28 @@ function App() {
 
             {error && <p role="alert" className="mt-4 rounded-xl border border-red-900/60 bg-red-950/60 p-3 text-sm text-red-300">{error}</p>}
             {loading && (
-              <div className="mt-5 rounded-xl border border-cyan-900/40 bg-cyan-950/20 p-4" aria-live="polite">
-                <div className="flex items-center gap-3">
-                  <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-400" />
-                  <p className="text-sm text-cyan-200">Researching, scoring, drafting, and reviewing. This can take about a minute.</p>
+              <div className="mt-5 overflow-hidden rounded-xl border border-cyan-900/40 bg-cyan-950/20" aria-live="polite">
+                <div className="h-1 bg-slate-900">
+                  <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-700" style={{ width: `${((loadingStage + 1) / WORKFLOW_STAGES.length) * 100}%` }} />
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 sm:grid-cols-4">
-                  {["Research", "Qualification", "Email", "Review"].map((stage) => <span key={stage} className="rounded-lg bg-slate-950/60 px-2 py-1.5 text-center">{stage}</span>)}
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="relative flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-50" />
+                      <span className="relative h-3 w-3 rounded-full bg-cyan-400" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-cyan-100">{WORKFLOW_STAGES[loadingStage].label}</p>
+                      <p className="text-xs text-slate-400">{WORKFLOW_STAGES[loadingStage].detail}. Progress is estimated while the workflow runs.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {WORKFLOW_STAGES.map((stage, index) => (
+                      <div key={stage.label} className={`rounded-lg border px-2 py-2 text-center text-xs transition ${index < loadingStage ? "border-emerald-900/60 bg-emerald-950/40 text-emerald-300" : index === loadingStage ? "border-cyan-700 bg-cyan-950/60 text-cyan-200" : "border-slate-800 bg-slate-950/60 text-slate-600"}`}>
+                        <span className="mr-1">{index < loadingStage ? "✓" : index + 1}</span>{stage.label}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -276,8 +330,43 @@ function App() {
                 )}
               </div>
 
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="rounded-xl border border-blue-900/50 bg-gradient-to-br from-blue-950/60 to-slate-900 p-4">
+                  <p className="text-xs text-blue-300/70">Lead score</p>
+                  <p className="mt-1 text-2xl font-bold text-blue-200">{leadScore?.score ?? "-"}<span className="text-sm font-normal text-slate-600">/10</span></p>
+                </div>
+                <div className="rounded-xl border border-emerald-900/50 bg-gradient-to-br from-emerald-950/60 to-slate-900 p-4">
+                  <p className="text-xs text-emerald-300/70">Web sources</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-200">{researchSources.length}</p>
+                </div>
+                <div className="rounded-xl border border-violet-900/50 bg-gradient-to-br from-violet-950/60 to-slate-900 p-4">
+                  <p className="text-xs text-violet-300/70">Revisions</p>
+                  <p className="mt-1 text-2xl font-bold text-violet-200">{revisions}</p>
+                </div>
+                <div className={`rounded-xl border bg-gradient-to-br to-slate-900 p-4 ${review?.approved ? "border-emerald-900/50 from-emerald-950/60" : "border-amber-900/50 from-amber-950/60"}`}>
+                  <p className={`text-xs ${review?.approved ? "text-emerald-300/70" : "text-amber-300/70"}`}>Overall quality</p>
+                  <p className={`mt-1 text-2xl font-bold ${review?.approved ? "text-emerald-200" : "text-amber-200"}`}>{review?.overall_score ?? "-"}<span className="text-sm font-normal text-slate-600">/10</span></p>
+                </div>
+              </div>
+
+              <div className="sticky top-3 z-10 flex gap-1 rounded-xl border border-slate-800 bg-slate-950/90 p-1 shadow-xl shadow-black/20 backdrop-blur">
+                {RESULT_VIEWS.map((view) => (
+                  <button
+                    type="button"
+                    key={view}
+                    onClick={() => setActiveView(view)}
+                    aria-pressed={activeView === view}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${activeView === view ? "bg-slate-800 text-white shadow" : "text-slate-500 hover:text-slate-200"}`}
+                  >
+                    {view}
+                    {view === "Review" && review && <span className={`ml-2 inline-block h-2 w-2 rounded-full ${review.approved ? "bg-emerald-400" : "bg-amber-400"}`} />}
+                  </button>
+                ))}
+              </div>
+
+              {activeView === "Overview" && <div className="animate-view space-y-5">
               <div className="grid gap-5 xl:grid-cols-2">
-                <Panel title="Company research" eyebrow={research?.industry || "Research"}>
+                <Panel title="Company research" eyebrow={research?.industry || "Research"} accent="cyan">
                   {research ? (
                     <>
                       <p className="text-sm leading-6 text-slate-300">{research.summary}</p>
@@ -318,7 +407,7 @@ function App() {
                   ) : <p className="whitespace-pre-wrap text-sm text-slate-300">{legacyText(result.research)}</p>}
                 </Panel>
 
-                <Panel title="Lead qualification" eyebrow="Fit assessment">
+                <Panel title="Lead qualification" eyebrow="Fit assessment" accent="blue">
                   {leadScore ? (
                     <div className="grid gap-5 sm:grid-cols-[120px_1fr]">
                       <div className="grid h-28 w-28 place-items-center rounded-full border-8 border-cyan-500/20 bg-cyan-950/30">
@@ -339,11 +428,13 @@ function App() {
                 </Panel>
               </div>
 
-              <Panel title="Personalization angle" eyebrow="Messaging strategy">
+              <Panel title="Personalization angle" eyebrow="Messaging strategy" accent="violet">
                 <p className="text-base leading-7 text-slate-200">{personalization?.angle || legacyText(result.personalization)}</p>
               </Panel>
+              </div>}
 
-              <Panel title="Generated email" eyebrow="Ready to edit">
+              {activeView === "Email" && <div className="animate-view">
+              <Panel title="Generated email" eyebrow="Ready to edit" className="border-indigo-900/40" accent="indigo">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs uppercase tracking-wider text-slate-500">Subject</p>
@@ -356,9 +447,14 @@ function App() {
                   </button>
                 </div>
               </Panel>
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-400">
+                <span className="font-medium text-slate-200">Tip:</span> Treat generated outreach as a draft. Verify every company-specific claim before sending.
+              </div>
+              </div>}
 
-              {review && (
-                <Panel title="Reviewer decision" eyebrow={review.approved ? "Approved by workflow" : "Revision limit reached"}>
+              {activeView === "Review" && review && (
+                <div className="animate-view">
+                <Panel title="Reviewer decision" eyebrow={review.approved ? "Approved by workflow" : "Revision limit reached"} accent={review.approved ? "emerald" : "amber"}>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <Score label="Research" value={review.research_score} />
                     <Score label="Personalization" value={review.personalization_score} />
@@ -370,6 +466,10 @@ function App() {
                     <div><h3 className="mb-2 text-sm font-medium text-amber-300">Remaining issues</h3><BulletList items={asList(review.issues)} /></div>
                   </div>
                 </Panel>
+                </div>
+              )}
+              {activeView === "Review" && !review && (
+                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-sm text-slate-500">No structured reviewer result is available for this older lead.</div>
               )}
             </div>
           )}
