@@ -1,6 +1,7 @@
 # LeadForge AI
 
 [![CI](https://github.com/sohamgudewar/LeadForge-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/sohamgudewar/LeadForge-AI/actions/workflows/ci.yml)
+[![Status: Evaluated prototype](https://img.shields.io/badge/status-evaluated_prototype-0F766E)](#known-limitations)
 
 LeadForge AI is an evidence-grounded outreach generation system. It researches
 a company, qualifies the lead, develops a personalization angle, drafts an
