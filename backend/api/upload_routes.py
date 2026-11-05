@@ -2,9 +2,11 @@ from pathlib import Path
 import re
 from uuid import uuid4
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 
+from api.rate_limit import enforce_run_limit
 from rag.ingest import ingest_pdf
 from graph.workflow import run_pipeline
 from database.crud import save_lead
@@ -58,7 +60,7 @@ async def _save_pdf(file: UploadFile, stem: str) -> Path:
     return file_path
 
 
-@router.post("/upload-pdf")
+@router.post("/upload-pdf", dependencies=[Depends(enforce_run_limit)])
 async def upload_pdf(
     file: UploadFile = File(...)
 ):
@@ -66,7 +68,9 @@ async def upload_pdf(
     file_path = await _save_pdf(file, Path(file.filename or "document").stem)
 
     try:
-        result = ingest_pdf(str(file_path))
+        # PDF parsing and embedding are CPU-bound and synchronous; run them in a
+        # worker thread so they don't block the event loop for other requests.
+        result = await run_in_threadpool(ingest_pdf, str(file_path))
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -78,7 +82,7 @@ async def upload_pdf(
     }
 
 
-@router.post("/run-agent-with-pdf")
+@router.post("/run-agent-with-pdf", dependencies=[Depends(enforce_run_limit)])
 async def run_agent_with_pdf(
     company: str = Form(...),
     file: UploadFile = File(...)
@@ -92,7 +96,7 @@ async def run_agent_with_pdf(
     file_path = await _save_pdf(file, company)
 
     try:
-        ingest_pdf(str(file_path), company_name=company)
+        await run_in_threadpool(ingest_pdf, str(file_path), company_name=company)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -100,7 +104,8 @@ async def run_agent_with_pdf(
         )
 
     try:
-        result = run_pipeline(company)
+        # The LangGraph pipeline makes several blocking Gemini/Tavily calls.
+        result = await run_in_threadpool(run_pipeline, company)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -108,7 +113,7 @@ async def run_agent_with_pdf(
         )
 
     try:
-        save_lead(result)
+        await run_in_threadpool(save_lead, result)
     except Exception as e:
         result["warning"] = f"Lead processed but could not be saved: {str(e)}"
 

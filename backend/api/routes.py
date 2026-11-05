@@ -1,6 +1,8 @@
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from api.rate_limit import enforce_run_limit
 
 from models.lead import LeadRequest
 
@@ -24,7 +26,7 @@ def _decode_structured(value):
         return value
 
 
-@router.post("/run-agent")
+@router.post("/run-agent", dependencies=[Depends(enforce_run_limit)])
 def run_agent(request: LeadRequest):
 
     result = run_pipeline(request.company)

@@ -122,3 +122,11 @@ def _mock_llm():
         for target in targets:
             stack.enter_context(patch(target, side_effect=structured_result))
         yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    from api.rate_limit import limiter
+    limiter.reset()
+    yield
+    limiter.reset()

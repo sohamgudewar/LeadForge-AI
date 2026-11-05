@@ -19,6 +19,17 @@ ONNXMiniLM_L6_V2.DOWNLOAD_PATH = MODEL_CACHE_PATH
 
 _vectorstore = None
 
+# Searching with only the company name returns near-arbitrary chunks, because
+# every chunk of that company's PDF mentions the company. Instead we ask the
+# questions the downstream agents actually need answered, then merge results.
+RETRIEVAL_QUERIES = (
+    "{company} products, services and what the company does",
+    "{company} customers, target market and positioning",
+    "{company} challenges, goals, priorities and growth plans",
+)
+TOP_K_PER_QUERY = 2
+MAX_CONTEXT_CHUNKS = 5
+
 
 class ChromaEmbeddings:
     def __init__(self):
@@ -43,21 +54,30 @@ def _get_vectorstore():
     return _vectorstore
 
 
-def retrieve_company_context(company: str):
+def normalize_company(company: str) -> str:
+    """Single source of truth for the company metadata key (ingest + retrieve)."""
+    return " ".join(company.split()).lower()
+
+
+def retrieve_company_context(company: str) -> str:
 
     vs = _get_vectorstore()
+    company_key = normalize_company(company)
 
-    docs = vs.similarity_search(
-        query=company,
-        k=3,
-        filter={
-            "company": company.lower()
-        }
-    )
+    seen: set[str] = set()
+    chunks: list[str] = []
+    for template in RETRIEVAL_QUERIES:
+        docs = vs.similarity_search(
+            query=template.format(company=company),
+            k=TOP_K_PER_QUERY,
+            filter={"company": company_key},
+        )
+        for doc in docs:
+            if doc.page_content not in seen:
+                seen.add(doc.page_content)
+                chunks.append(doc.page_content)
 
-    if not docs:
+    if not chunks:
         return "No company knowledge found."
 
-    return "\n".join(
-        [doc.page_content for doc in docs]
-    )
+    return "\n\n".join(chunks[:MAX_CONTEXT_CHUNKS])

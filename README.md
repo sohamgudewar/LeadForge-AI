@@ -66,6 +66,12 @@ Uploaded PDFs are private company context. Files are restricted to PDF content,
 10 MB, assigned server-generated names, split into chunks, embedded, and filtered
 by normalized company metadata during retrieval.
 
+Each chunk gets a deterministic ID (SHA-256 of company + text), so uploading the
+same PDF again overwrites its chunks instead of duplicating them. Retrieval runs
+three focused queries (products/services, customers/market, challenges/priorities)
+for the company, merges and de-duplicates the hits, and passes up to five chunks
+to the agents.
+
 ## Evaluation
 
 The versioned dataset in `backend/evaluation/cases.json` covers ten companies.
@@ -171,6 +177,13 @@ npm run build
 | `GET` | `/leads` | List generated leads |
 | `GET` | `/lead/{lead_id}` | Fetch a complete outreach package |
 
+The three `POST` endpoints spend LLM, search and embedding quota, so they are
+rate limited with an in-memory sliding window: `RUN_LIMIT_PER_CLIENT_HOUR`
+(default 10) per client IP and `RUN_LIMIT_GLOBAL_HOUR` (default 100) in total.
+The global cap bounds cost even if client IPs are rotated. Exceeding either
+returns `429` with a `Retry-After` header. Blocking PDF parsing and pipeline
+calls run in a worker thread so they don't stall the event loop.
+
 Example request:
 
 ```bash
@@ -190,6 +203,7 @@ The repository-level `railway.toml` selects `backend/Dockerfile`, checks
 - `GOOGLE_API_KEY`
 - `TAVILY_API_KEY` (optional)
 - `CORS_ORIGINS=https://leadforgeai0i0.vercel.app`
+- `RUN_LIMIT_PER_CLIENT_HOUR`, `RUN_LIMIT_GLOBAL_HOUR` (optional rate limits)
 - `RAILWAY_DOCKERFILE_PATH=backend/Dockerfile` if the dashboard does not pick up
   Config as Code
 
@@ -243,8 +257,9 @@ frontend/
   hypotheses instead of failing the entire workflow.
 - Long model runs execute synchronously inside the request. A production system
   should use background jobs and progress events.
-- Authentication, tenant isolation, rate limiting, and database migrations are
-  not yet implemented.
+- Authentication, tenant isolation, and database migrations are not yet
+  implemented. Rate limiting is in-memory, so it is per instance; multiple
+  instances would need a shared store such as Redis.
 - Uploaded files and the local Chroma store require persistent storage when the
   backend is deployed on ephemeral infrastructure.
 
