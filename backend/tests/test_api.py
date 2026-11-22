@@ -97,6 +97,20 @@ class TestRunAgent:
         assert response.status_code == 200
         assert response.json()["company"] == "Acme Corporation"
 
+    def test_repeat_company_is_served_from_cache(self, client):
+        from unittest.mock import patch
+        from graph.workflow import run_pipeline as real_pipeline
+
+        with patch("api.routes.run_pipeline", wraps=real_pipeline) as pipeline:
+            first = client.post("/run-agent", json={"company": "Acme"})
+            second = client.post("/run-agent", json={"company": "  acme "})
+
+        assert first.status_code == second.status_code == 200
+        assert pipeline.call_count == 1
+        assert "cached" not in first.json()
+        assert second.json()["cached"] is True
+        assert second.json()["email"] == first.json()["email"]
+
     def test_accepts_valid_company(self, client):
         response = client.post(
             "/run-agent",

@@ -1,3 +1,7 @@
+import logging
+import os
+import time
+from functools import wraps
 from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
@@ -11,7 +15,26 @@ from agents.research_agent import research_company
 from agents.reviewer_agent import review_outreach
 from graph.state import SDRState
 
-MAX_REVISIONS = 2
+MAX_REVISIONS = int(os.getenv("MAX_REVISIONS", "2"))
+
+logger = logging.getLogger("leadforge.workflow")
+
+
+def timed(name: str):
+    """Log how long each graph node takes, so slow stages are visible in logs."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(state):
+            started = time.perf_counter()
+            try:
+                return func(state)
+            finally:
+                logger.info("node=%s seconds=%.2f", name, time.perf_counter() - started)
+
+        return wrapper
+
+    return decorator
 
 
 def knowledge_node(state: SDRState) -> dict:
@@ -86,20 +109,28 @@ def route_after_review(state: SDRState) -> Literal["revise_email", "__end__"]:
 
 def build_workflow():
     builder = StateGraph(SDRState)
-    builder.add_node("knowledge", knowledge_node)
-    builder.add_node("research", research_node)
-    builder.add_node("enrichment", enrichment_node)
-    builder.add_node("scoring", scoring_node)
-    builder.add_node("personalization", personalization_node)
-    builder.add_node("email", email_node)
-    builder.add_node("review", review_node)
-    builder.add_node("revise_email", revise_email_node)
+    builder.add_node("knowledge", timed("knowledge")(knowledge_node))
+    builder.add_node("research", timed("research")(research_node))
+    builder.add_node("enrichment", timed("enrichment")(enrichment_node))
+    builder.add_node("scoring", timed("scoring")(scoring_node))
+    builder.add_node("personalization", timed("personalization")(personalization_node))
+    builder.add_node("email", timed("email")(email_node))
+    builder.add_node("review", timed("review")(review_node))
+    builder.add_node("revise_email", timed("revise_email")(revise_email_node))
 
+    # Knowledge retrieval, web research and enrichment only need the company
+    # name, so they run in parallel instead of one after another.
     builder.add_edge(START, "knowledge")
-    builder.add_edge("knowledge", "research")
-    builder.add_edge("research", "enrichment")
-    builder.add_edge("enrichment", "scoring")
-    builder.add_edge("scoring", "personalization")
+    builder.add_edge(START, "research")
+    builder.add_edge(START, "enrichment")
+
+    # Lead scoring only needs research and nothing downstream reads it, so it
+    # runs as a side branch alongside personalization and email.
+    builder.add_edge("research", "scoring")
+    builder.add_edge("scoring", END)
+
+    # Personalization waits for all three parallel inputs.
+    builder.add_edge(["knowledge", "research", "enrichment"], "personalization")
     builder.add_edge("personalization", "email")
     builder.add_edge("email", "review")
     builder.add_conditional_edges("review", route_after_review)
