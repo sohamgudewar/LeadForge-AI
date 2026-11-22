@@ -8,6 +8,9 @@ from models.outreach import ResearchSource
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 SEARCH_TIMEOUT_SECONDS = 12
 MAX_RESULTS = 5
+# "basic" search returns in roughly half the time of "advanced" and its
+# snippets are enough for the evidence the research agent cites.
+SEARCH_DEPTH = os.getenv("TAVILY_SEARCH_DEPTH", "basic")
 
 
 def _is_public_http_url(value: str) -> bool:
@@ -36,7 +39,7 @@ def search_company(company: str) -> list[ResearchSource]:
             json={
                 "api_key": api_key,
                 "query": f'"{company}" company products recent news',
-                "search_depth": "advanced",
+                "search_depth": SEARCH_DEPTH,
                 "max_results": MAX_RESULTS,
                 "include_answer": False,
                 "include_raw_content": False,

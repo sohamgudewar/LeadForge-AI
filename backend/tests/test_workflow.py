@@ -29,6 +29,37 @@ class TestPipeline:
         assert result["review"]["approved"] is True
         assert result["revision_count"] == 0
 
+    def test_independent_stages_run_in_parallel(self):
+        """Knowledge, research and enrichment only need the company name.
+
+        Each one is made to wait on a barrier that releases only when all
+        three are running at the same time; if they ran one after another the
+        barrier would time out and the test would fail.
+        """
+        import threading
+
+        from graph import workflow
+
+        barrier = threading.Barrier(3, timeout=5)
+        real_knowledge = workflow.get_company_knowledge
+        real_research = workflow.research_company
+        real_enrich = workflow.enrich_lead
+
+        def waits(func):
+            def wrapper(*args, **kwargs):
+                barrier.wait()
+                return func(*args, **kwargs)
+
+            return wrapper
+
+        with patch("graph.workflow.get_company_knowledge", waits(real_knowledge)), patch(
+            "graph.workflow.research_company", waits(real_research)
+        ), patch("graph.workflow.enrich_lead", waits(real_enrich)):
+            result = run_pipeline("Acme")
+
+        assert result["personalization"] is not None
+        assert result["lead_score"]["score"] == 8
+
     def test_approved_email_is_not_revised(self):
         with patch("graph.workflow.generate_email", wraps=None) as email_mock:
             from models.outreach import OutreachEmail

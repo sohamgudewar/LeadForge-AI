@@ -1,5 +1,6 @@
 import os
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["SKIP_WARMUP"] = "1"
 
 import pytest
 from contextlib import ExitStack
@@ -18,6 +19,15 @@ from models.outreach import (
     OutreachReview,
     Personalization,
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_result_cache():
+    from api import routes
+
+    routes._result_cache.clear()
+    yield
+    routes._result_cache.clear()
 
 
 @pytest.fixture(autouse=True, scope="function")

@@ -14,15 +14,20 @@ FROM python:3.11-slim AS runtime
 ENV PATH=/usr/local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
+    PORT=8000 \
+    CHROMA_MODEL_CACHE_PATH=/app/.models/all-MiniLM-L6-v2
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 COPY backend/ /app/
 
+# Download the embedding model at build time so a fresh container does not
+# fetch it when the first user runs the workflow.
+RUN python -c "from rag.retriever import ChromaEmbeddings; ChromaEmbeddings().embed_query('warm up')"
+
 RUN addgroup --system app && adduser --system --ingroup app app \
-    && mkdir -p /app/uploads /app/chroma_db \
+    && mkdir -p /app/uploads /app/chroma_db /app/.models \
     && chown -R app:app /app
 
 USER app

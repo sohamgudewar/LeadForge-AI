@@ -1,4 +1,7 @@
 import json
+import os
+import threading
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -16,6 +19,38 @@ from database.crud import (
 
 router = APIRouter()
 
+# Repeat requests for the same company within this window return the previous
+# result instantly instead of re-running every model call. 0 disables it.
+RESULT_CACHE_TTL_SECONDS = int(os.getenv("RESULT_CACHE_TTL_SECONDS", "3600"))
+_result_cache: dict[str, tuple[float, dict]] = {}
+_result_cache_lock = threading.Lock()
+
+
+def _cache_key(company: str) -> str:
+    return " ".join(company.split()).lower()
+
+
+def _get_cached_result(company: str) -> dict | None:
+    if RESULT_CACHE_TTL_SECONDS <= 0:
+        return None
+    key = _cache_key(company)
+    with _result_cache_lock:
+        entry = _result_cache.get(key)
+        if entry is None:
+            return None
+        stored_at, result = entry
+        if time.monotonic() - stored_at > RESULT_CACHE_TTL_SECONDS:
+            _result_cache.pop(key, None)
+            return None
+        return result
+
+
+def _store_cached_result(company: str, result: dict) -> None:
+    if RESULT_CACHE_TTL_SECONDS <= 0:
+        return
+    with _result_cache_lock:
+        _result_cache[_cache_key(company)] = (time.monotonic(), result)
+
 
 def _decode_structured(value):
     if not isinstance(value, str):
@@ -29,7 +64,12 @@ def _decode_structured(value):
 @router.post("/run-agent", dependencies=[Depends(enforce_run_limit)])
 def run_agent(request: LeadRequest):
 
+    cached = _get_cached_result(request.company)
+    if cached is not None:
+        return {**cached, "cached": True}
+
     result = run_pipeline(request.company)
+    _store_cached_result(request.company, result)
 
     try:
         save_lead(result)
