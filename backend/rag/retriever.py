@@ -64,11 +64,21 @@ def retrieve_company_context(company: str) -> str:
     vs = _get_vectorstore()
     company_key = normalize_company(company)
 
+    # Most companies have no uploaded PDF. A metadata lookup answers that
+    # without running the embedding model, which takes ~17 s for three queries
+    # on a small CPU.
+    if not vs.get(where={"company": company_key}, limit=1, include=[])["ids"]:
+        return "No company knowledge found."
+
+    # Embed all queries in one batch instead of one model call per query.
+    queries = [template.format(company=company) for template in RETRIEVAL_QUERIES]
+    vectors = vs.embeddings.embed_documents(queries)
+
     seen: set[str] = set()
     chunks: list[str] = []
-    for template in RETRIEVAL_QUERIES:
-        docs = vs.similarity_search(
-            query=template.format(company=company),
+    for vector in vectors:
+        docs = vs.similarity_search_by_vector(
+            embedding=vector,
             k=TOP_K_PER_QUERY,
             filter={"company": company_key},
         )

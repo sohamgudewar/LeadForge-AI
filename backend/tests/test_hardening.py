@@ -102,16 +102,45 @@ class TestMultiQueryRetrieval:
 
         shared = Document(page_content="shared chunk")
         calls = []
+        embed_batches = []
+
+        class FakeEmbeddings:
+            def embed_documents(self, texts):
+                embed_batches.append(list(texts))
+                return [[float(i)] for i in range(len(texts))]
 
         class FakeStore:
-            def similarity_search(self, query, k, filter):
-                calls.append((query, k, filter))
-                return [shared, Document(page_content=f"unique for {query}")]
+            embeddings = FakeEmbeddings()
+
+            def get(self, where, limit, include):
+                return {"ids": ["chunk-1"]}
+
+            def similarity_search_by_vector(self, embedding, k, filter):
+                calls.append((embedding, k, filter))
+                return [shared, Document(page_content=f"unique for {embedding}")]
 
         with patch.object(retriever, "_get_vectorstore", return_value=FakeStore()):
             context = retriever.retrieve_company_context("Acme  Corp")
 
+        assert len(embed_batches) == 1
+        assert len(embed_batches[0]) == len(retriever.RETRIEVAL_QUERIES)
         assert len(calls) == len(retriever.RETRIEVAL_QUERIES)
         assert all(f == {"company": "acme corp"} for _, _, f in calls)
         assert context.count("shared chunk") == 1
         assert len(context.split("\n\n")) <= retriever.MAX_CONTEXT_CHUNKS
+
+    def test_skips_embedding_when_company_has_no_documents(self):
+        from rag import retriever
+
+        class FakeStore:
+            @property
+            def embeddings(self):
+                raise AssertionError("embedding model should not run")
+
+            def get(self, where, limit, include):
+                return {"ids": []}
+
+        with patch.object(retriever, "_get_vectorstore", return_value=FakeStore()):
+            context = retriever.retrieve_company_context("Unknown Co")
+
+        assert context == "No company knowledge found."
