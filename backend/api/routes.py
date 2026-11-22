@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import threading
 import time
@@ -18,6 +19,7 @@ from database.crud import (
 )
 
 router = APIRouter()
+logger = logging.getLogger("leadforge.api")
 
 # Repeat requests for the same company within this window return the previous
 # result instantly instead of re-running every model call. 0 disables it.
@@ -68,7 +70,14 @@ def run_agent(request: LeadRequest):
     if cached is not None:
         return {**cached, "cached": True}
 
-    result = run_pipeline(request.company)
+    try:
+        result = run_pipeline(request.company)
+    except Exception as exc:
+        logger.exception("Workflow failed for %s", request.company)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Workflow failed: {type(exc).__name__}: {exc}"[:400],
+        ) from exc
     _store_cached_result(request.company, result)
 
     try:

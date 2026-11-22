@@ -111,6 +111,15 @@ class TestRunAgent:
         assert second.json()["cached"] is True
         assert second.json()["email"] == first.json()["email"]
 
+    def test_model_failure_returns_clear_error(self, client):
+        from unittest.mock import patch
+
+        with patch("api.routes.run_pipeline", side_effect=TimeoutError("model timed out")):
+            response = client.post("/run-agent", json={"company": "Acme"})
+
+        assert response.status_code == 502
+        assert "model timed out" in response.json()["detail"]
+
     def test_accepts_valid_company(self, client):
         response = client.post(
             "/run-agent",
